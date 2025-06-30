@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>极简博客</title>
+    <script src="web-lib/vue@3__dist__vue.global.js"></script>
+    <!-- 引入 Tailwind CSS -->
+    <script src="web-lib/cdn.tailwindcss.com.js"></script>
+    <!-- 配置 Tailwind 的暗黑模式 -->
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                light: "#3b82f6",
+                dark: "#60a5fa",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      .header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(10px);
+        background-color: rgba(255, 255, 255, 0.8);
+      }
+
+      .dark .header {
+        background-color: rgba(17, 24, 39, 0.8);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 4rem;
+        /* header高度 */
+        height: calc(100vh - 4rem - 4rem);
+        /* 减去header和footer高度 */
+        overflow-y: auto;
+      }
+
+      .scroll-area {
+        max-height: 100%;
+        overflow-y: auto;
+      }
+
+      .post-card {
+        transition: all 0.2s ease;
+      }
+
+      .post-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+
+      .search-input:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+      }
+
+      .tag {
+        display: inline-block;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        transition: all 0.2s;
+        cursor: pointer;
+      }
+
+      .tag:hover {
+        background-color: rgba(59, 130, 246, 0.2);
+      }
+
+      .tag.selected {
+        background-color: #3b82f6;
+        color: white;
+      }
+
+      .dark .tag {
+        background-color: rgba(96, 165, 250, 0.2);
+        color: #60a5fa;
+      }
+
+      .dark .tag:hover {
+        background-color: rgba(96, 165, 250, 0.3);
+      }
+
+      .dark .tag.selected {
+        background-color: #60a5fa;
+        color: white;
+      }
+
+      .directory-item {
+        transition: all 0.2s;
+        cursor: pointer;
+      }
+
+      .directory-item:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .dark .directory-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+
+      .directory-item.selected {
+        background-color: rgba(59, 130, 246, 0.1);
+        font-weight: 500;
+      }
+
+      .dark .directory-item.selected {
+        background-color: rgba(96, 165, 250, 0.2);
+      }
+
+      .directory-children {
+        margin-left: 1rem;
+        border-left: 1px solid rgba(0, 0, 0, 0.1);
+      }
+
+      .dark .directory-children {
+        border-left-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .footer {
+        margin-top: auto;
+      }
+
+      /* 统一滚动条样式 - 确保覆盖所有滚动区域 */
+      .sidebar .scroll-area {
+        max-height: calc(100vh - 12rem);
+        /* 动态高度适应 */
+        overflow-y: auto;
+        scrollbar-width: thin;
+        /* Firefox */
+        scrollbar-color: rgba(59, 130, 246, 0.5) transparent;
+      }
+
+      /* Chrome/Safari 滚动条样式 */
+      .sidebar .scroll-area::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+
+      .sidebar .scroll-area::-webkit-scrollbar-thumb {
+        background-color: rgba(59, 130, 246, 0.5);
+        border-radius: 3px;
+      }
+
+      .sidebar .scroll-area::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      /* 暗黑模式适配 */
+      .dark .sidebar .scroll-area::-webkit-scrollbar-thumb {
+        background-color: rgba(96, 165, 250, 0.5);
+      }
+
+      /* 目录项固定高度 + 滚动 */
+      .sidebar {
+        height: calc(100vh - 4rem - 4rem);
+        /* 总高度 - header - footer */
+        overflow: hidden;
+        /* 防止外层滚动 */
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar-content {
+        flex: 1;
+        overflow-y: auto;
+        /* 内部滚动 */
+      }
+
+      .scroll-area {
+        padding-left: 12px;
+        margin-right: 12px;
+      }
+
+      /* 返回顶部按钮 */
+      .back-to-top {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        background-color: rgba(59, 130, 246, 0.9);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        opacity: 0;
+        visibility: hidden;
+        z-index: 40;
+      }
+
+      .back-to-top.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .back-to-top:hover {
+        background-color: rgba(59, 130, 246, 1);
+        transform: translateY(-2px);
+      }
+
+      .dark .back-to-top {
+        background-color: rgba(96, 165, 250, 0.9);
+      }
+
+      .dark .back-to-top:hover {
+        background-color: rgba(96, 165, 250, 1);
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-200"
+  >
+    <div id="app">
+      <header class="header py-3 border-b border-gray-200 dark:border-gray-700">
+        <div class="container mx-auto px-4">
+          <div class="flex items-center justify-between gap-4">
+            <!-- 标题和主题按钮（窄屏时同行显示） -->
+            <div class="flex items-center gap-4">
+              <h1 class="text-xl font-bold">极简博客</h1>
+              <!-- 窄屏显示的主题按钮 -->
+              <button
+                @click="toggleTheme"
+                class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors md:hidden"
+                :title="darkMode ? '切换至亮色模式' : '切换至暗色模式'"
+              >
+                <svg
+                  v-if="darkMode"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                  ></path>
+                </svg>
+                <svg
+                  v-else
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+            <div class="flex flex-col md:flex-row gap-4">
+              <!-- 搜索框 -->
+              <div class="relative flex-1">
+                <input
+                  v-model="searchQuery"
+                  type="text"
+                  @input="handleSearchInput"
+                  placeholder="搜索文章或标签..."
+                  class="search-input bg-gray-100 dark:bg-gray-800 rounded-full py-2 px-4 w-full transition-all duration-200 border border-transparent"
+                />
+                <svg
+                  class="w-5 h-5 absolute right-3 top-2.5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  ></path>
+                </svg>
+              </div>
+
+              <!-- 主题切换按钮 -->
+              <button
+                @click="toggleTheme"
+                class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors self-end hidden md:block"
+                :title="darkMode ? '切换至亮色模式' : '切换至暗色模式'"
+              >
+                <svg
+                  v-if="darkMode"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                  ></path>
+                </svg>
+                <svg
+                  v-else
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="container mx-auto px-4 flex flex-1">
+        <!-- 固定侧边栏 -->
+        <div class="w-64 flex-shrink-0 hidden md:block">
+          <div class="sidebar py-4">
+            <div>
+              <h2 class="text-lg font-semibold mb-3 px-3">标签</h2>
+              <div class="scroll-area px-3">
+                <div class="flex flex-wrap">
+                  <span
+                    v-for="tag in visibleTags"
+                    :key="tag"
+                    class="tag"
+                    :class="{ 'selected': selectedTags.includes(tag) }"
+                    @click="toggleTag(tag)"
+                  >
+                    {{ tag }}
+                  </span>
+                  <span
+                    v-if="allTags.length > visibleTagsCount"
+                    class="tag cursor-pointer bg-gray-100 dark:bg-gray-700"
+                    @click="showAllTags = !showAllTags"
+                  >
+                    {{ showAllTags ? '收起' : '......' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 目录 -->
+            <div class="mb-8">
+              <h2 class="text-lg font-semibold mb-3 px-3">目录</h2>
+              <div class="scroll-area">
+                <ul class="space-y-1">
+                  <!-- 固定显示的"所有文章"选项 -->
+                  <li
+                    class="directory-item rounded px-3 py-2 sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700"
+                    :class="{ 'selected': !selectedDirectory && !searchQuery && !selectedTags.length }"
+                    @click="clearFilter"
+                  >
+                    所有文章
+                  </li>
+
+                  <directory-tree
+                    v-for="directory in directories"
+                    :key="directory.id"
+                    :directory="directory"
+                    :selected="selectedDirectory"
+                    @select="filterByDirectory"
+                  />
+                  <li
+                    class="directory-item rounded px-3 py-2"
+                    :class="{ 'selected': !selectedDirectory && !searchQuery && !selectedTags.length }"
+                    @click="clearFilter"
+                  >
+                    全部文章
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <main class="flex-1 py-6">
+          <div v-if="filteredPosts.length > 0" class="space-y-4">
+            <div
+              v-for="post in filteredPosts"
+              :key="post.id"
+              class="post-card bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+            >
+              <h2 class="text-xl font-bold mb-2">{{ post.title }}</h2>
+              <p class="text-gray-600 dark:text-gray-400 mb-3">
+                {{ post.excerpt }}
+              </p>
+
+              <!-- 标签展示 -->
+              <div class="flex flex-wrap mb-3">
+                <span
+                  v-for="tag in post.tags"
+                  :key="tag"
+                  class="tag"
+                  :class="{ 'selected': selectedTags.includes(tag) }"
+                  @click="toggleTag(tag)"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+
+              <div
+                class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400"
+              >
+                <span>{{ formatDate(post.date) }}</span>
+                <a
+                  href="#"
+                  @click.prevent="viewPost(post.id)"
+                  class="text-primary-light dark:text-primary-dark hover:underline"
+                >
+                  阅读更多
+                </a>
+              </div>
+            </div>
+          </div>
+          <div
+            v-else
+            class="bg-white dark:bg-gray-800 rounded-lg p-8 text-center border border-gray-200 dark:border-gray-700"
+          >
+            <p class="text-gray-500 dark:text-gray-400">没有找到匹配的文章</p>
+          </div>
+        </main>
+      </div>
+
+      <div
+        class="back-to-top"
+        :class="{ visible: showBackToTop }"
+        @click="scrollToTop"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M5 10l7-7m0 0l7 7m-7-7v18"
+          ></path>
+        </svg>
+      </div>
+
+      <footer
+        class="footer py-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+      >
+        <div class="container mx-auto px-4">
+          <!-- 社交媒体链接 -->
+          <div class="flex justify-center space-x-6 mb-4">
+            <!-- GitHub -->
+            <a
+              href="https://github.com/liangyuanguo"
+              target="_blank"
+              class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              Github
+            </a>
+          </div>
+          <!-- 版权信息 -->
+          <div class="text-center text-gray-500 dark:text-gray-400 text-sm">
+            © 2025 by LiangyuanGuo.
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module">
+      let indexData = [];
+      const idxUrl =
+        new URLSearchParams(window.location.search).get("url") ||
+        window.location.origin + "/examples/data-index.json";
+
+      try {
+        const response = await fetch(idxUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        indexData = await response.json();
+      } catch (error) {
+        alert(`获取Markdown数据失败: ${error.message}`);
+        console.error(`获取Markdown数据失败: ${error.message}`);
+      }
+
+      function parsePostsToTree(postsTable) {
+        const posts = [];
+        const dirTree = {}; // 目录树结构
+        const pathMap = new Map(); // 缓存路径节点
+
+        // 获取基础路径（去掉文件名部分）
+        const baseUrl = new URL(idxUrl, window.location.href);
+        const basePath = baseUrl.href.split("/").slice(0, -1).join("/") + "/";
+
+        // 处理文章数据并构建目录树
+        postsTable.forEach((row) => {
+          if (row[0] !== "post") return;
+
+          // 保留原始的 directory 字段（绝对路径）
+          const directory = row[6]; // 不修改原始值
+
+          // 生成文件名（根据需求自定义）
+          const filename = `${row[1]}.md`; // 或基于标题生成
+
+          // 添加文章（不修改 directory）
+          const post = {
+            id: row[1],
+            title: row[2],
+            excerpt: row[3],
+            content: row[4],
+            date: row[5],
+            directory: directory, // 保持原样
+            tags: row[7],
+            href: `${basePath}${directory}/${filename}`, // 新增跳转链接
+          };
+          posts.push(post);
+
+          // 解析路径构建目录树（仅用于目录结构，不影响原始数据）
+          const pathParts = directory.split("/");
+          let current = dirTree;
+
+          pathParts.forEach((part, index) => {
+            if (!current[part]) {
+              console.log(pathParts);
+              const fullPath = pathParts.slice(0, index + 1).join("/");
+              current[part] = {
+                _type: "directory",
+                _path: directory,
+                children: {},
+              };
+              pathMap.set(fullPath, current[part]);
+            }
+            current = current[part].children;
+          });
+        });
+
+        // 转换目录树为数组格式
+        const convertTree = (parentKey, node) => {
+          return Object.entries(node).map(([name, data]) => ({
+            id: parentKey ? `${parentKey}/${name}` : name,
+            path: data._path,
+            name: name,
+            children: convertTree( parentKey ? `${parentKey}/${name}` : name, data.children),
+          }));
+        };
+
+        return {
+          posts, // 包含原始 directory 和新增的 href
+          directories: convertTree('', dirTree),
+        };
+      }
+      const indexData2 = parsePostsToTree(indexData);
+
+      const { createApp, ref, computed, onMounted, watch } = Vue;
+
+      // 目录树组件
+      const DirectoryTree = {
+        props: ["directory", "selected"],
+        template: `
+                      <li>
+                        <div
+                            class="directory-item rounded px-3 py-2"
+                            :class="{ 'selected': selected === directory.id }"
+                            @click="$emit('select', directory.id)"
+                        >
+                          {{ directory.name }}
+                        </div>
+                        <ul v-if="directory.children" class="directory-children mt-1 space-y-1">
+                          <directory-tree
+                              v-for="child in directory.children"
+                              :key="child.id"
+                              :directory="child"
+                              :selected="selected"
+                              @select="$emit('select', $event)"
+                          />
+                        </ul>
+                      </li>
+                    `,
+      };
+
+      const app = createApp({
+        components: {
+          DirectoryTree,
+        },
+        setup() {
+          const parseUrlState = () => {
+            const params = new URLSearchParams(window.location.search);
+            return {
+              search: params.get("search") || "",
+              tags: params.get("tags") ? params.get("tags").split(",") : [],
+              dir: params.get("dir") || null,
+              url: params.get("url") || "",
+            };
+          };
+          const urlState = parseUrlState();
+
+          // 主题切换
+          const darkMode = ref(false);
+          const showAllTags = ref(false);
+          const visibleTagsCount = ref(5);
+
+          // 返回顶部功能
+          const showBackToTop = ref(false);
+
+          // 检查本地存储或系统偏好
+          onMounted(() => {
+            const savedTheme = localStorage.getItem("theme");
+            const systemPrefersDark = window.matchMedia(
+              "(prefers-color-scheme: dark)"
+            ).matches;
+
+            if (savedTheme) {
+              darkMode.value = savedTheme === "dark";
+            } else if (systemPrefersDark) {
+              darkMode.value = true;
+            }
+
+            applyTheme();
+            window.addEventListener("scroll", checkScroll);
+          });
+
+          const checkScroll = () => {
+            showBackToTop.value = window.scrollY > 300;
+          };
+
+          const scrollToTop = () => {
+            window.scrollTo({
+              top: 0,
+              behavior: "smooth",
+            });
+          };
+
+          const visibleTags = computed(() => {
+            return showAllTags.value
+              ? allTags.value
+              : allTags.value.slice(0, visibleTagsCount.value);
+          });
+
+          const applyTheme = () => {
+            if (darkMode.value) {
+              document.documentElement.classList.add("dark");
+            } else {
+              document.documentElement.classList.remove("dark");
+            }
+          };
+
+          const toggleTheme = () => {
+            darkMode.value = !darkMode.value;
+            localStorage.setItem("theme", darkMode.value ? "dark" : "light");
+            applyTheme();
+          };
+
+          // 搜索查询
+          const searchQuery = ref(urlState.search);
+
+          // 层级目录数据
+          const directories = ref(indexData2.directories);
+
+          // 当前选中的目录
+          const selectedDirectory = ref(urlState.dir);
+
+          // 当前选中的标签
+          const selectedTags = ref(urlState.tags);
+
+          // 博客数据
+          const posts = ref(indexData2.posts);
+
+          // 所有标签
+          const allTags = computed(() => {
+            const tags = new Set();
+            posts.value.forEach((post) => {
+              post.tags.forEach((tag) => tags.add(tag));
+            });
+            return Array.from(tags).sort();
+          });
+
+          // 过滤文章
+          const filteredPosts = computed(() => {
+            let result = posts.value;
+
+            // 按目录过滤
+            if (selectedDirectory.value) {
+              result = result.filter(
+                (post) => {
+                  return post.directory === selectedDirectory.value ||
+                  post.directory.startsWith(selectedDirectory.value + "/")
+                }
+              );
+            }
+
+            // 按标签过滤
+            if (selectedTags.value.length > 0) {
+              result = result.filter((post) =>
+                selectedTags.value.every((tag) => post.tags.includes(tag))
+              );
+            }
+
+            // 按搜索词过滤
+            if (searchQuery.value) {
+              const query = searchQuery.value.toLowerCase();
+              result = result.filter(
+                (post) =>
+                  post.title.toLowerCase().includes(query) ||
+                  post.excerpt.toLowerCase().includes(query) ||
+                  post.tags.some((tag) => tag.toLowerCase().includes(query))
+              );
+            }
+
+            return result;
+          });
+
+          // 按目录过滤
+          const filterByDirectory = (directoryId) => {
+            selectedDirectory.value = directoryId;
+            selectedTags.value = [];
+            searchQuery.value = "";
+
+            syncStateToUrl();
+          };
+
+          // 切换标签选择状态
+          const toggleTag = (tag) => {
+            const index = selectedTags.value.indexOf(tag);
+            if (index === -1) {
+              selectedTags.value.push(tag);
+            } else {
+              selectedTags.value.splice(index, 1);
+            }
+            selectedDirectory.value = null;
+
+            syncStateToUrl();
+          };
+
+          // 清除过滤
+          const clearFilter = () => {
+            selectedDirectory.value = null;
+            selectedTags.value = [];
+            searchQuery.value = "";
+
+            syncStateToUrl();
+          };
+
+          // 查看完整文章
+          const viewPost = (postId) => {
+            const post = posts.value.find((p) => p.id === postId);
+            window.location.href = post.href;
+          };
+
+          // 格式化日期
+          const formatDate = (dateString) => {
+            const options = { year: "numeric", month: "long", day: "numeric" };
+            return new Date(dateString).toLocaleDateString("zh-CN", options);
+          };
+
+          // 搜索框输入时（防抖 300ms）
+          let debounceTimer;
+          const handleSearchInput = (event) => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+              searchQuery.value = event.target.value;
+              syncStateToUrl();
+            }, 300);
+          };
+
+          // --- URL 同步逻辑 ---
+          // 将状态同步到 URL
+          const syncStateToUrl = () => {
+            const params = new URLSearchParams(window.location.search);
+            if (searchQuery.value) params.set("search", searchQuery.value);
+            if (selectedTags.value.length)
+              params.set("tags", selectedTags.value.join(","));
+            else params.delete("tags");
+            if (selectedDirectory.value)
+              params.set("dir", selectedDirectory.value);
+            else params.delete("dir");
+            params.set("url", idxUrl); // 保持 URL 不变
+
+            // 无刷新更新 URL
+            const newUrl = window.location.pathname + "?" + params.toString();
+            window.history.pushState({}, "", newUrl);
+          };
+
+          // 监听浏览器前进/后退按钮
+          window.addEventListener("popstate", () => {
+            const newState = parseUrlState();
+            searchQuery.value = newState.search;
+            selectedTags.value = newState.tags;
+            selectedDirectory.value = newState.dir;
+          });
+
+          return {
+            handleSearchInput,
+            showBackToTop,
+            scrollToTop,
+            darkMode,
+            toggleTheme,
+            searchQuery,
+            directories,
+            selectedDirectory,
+            selectedTags,
+            posts,
+            allTags,
+            visibleTags,
+            showAllTags,
+            visibleTagsCount,
+            filteredPosts,
+            filterByDirectory,
+            toggleTag,
+            clearFilter,
+            viewPost,
+
+            formatDate,
+          };
+        },
+      });
+
+      app.component("directory-tree", DirectoryTree);
+
+      app.mount("#app");
+    </script>
+  </body>
+</html>

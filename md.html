@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Marked in the browser</title>
+  </head>
+  <body class="dark">
+    <aside id="c-md-toc" class="c-md-toc">
+      <div class="c-md-toc-title">
+        <span>TOC</span>
+      </div>
+      <ul class="c-md-toc-list"></ul>
+
+      <footer
+        style="
+          padding: 20px;
+          text-align: center;
+          border-top: 1px solid var(--border-color);
+          color: var(--text-color);
+        "
+      >
+        <p>
+          © 2025 by LiangyuanGuo.
+        </p>
+      </footer>
+    </aside>
+    <div id="content" class="markdown-body-light"></div>
+
+    <style>
+      /* 主题切换按钮样式 */
+      #theme-toggle-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+      }
+
+      #theme-toggle-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      #theme-toggle-btn:hover {
+        transform: scale(1.1);
+        background: rgba(255, 255, 255, 1);
+      }
+
+      #theme-toggle-btn svg {
+        width: 20px;
+        height: 20px;
+      }
+    </style>
+    <div id="theme-toggle-container">
+      <button id="theme-toggle-btn" title="切换主题">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        ></svg>
+      </button>
+    </div>
+
+    <script>
+      // 初始化主题按钮图标
+      function initThemeButton() {
+        const savedTheme = localStorage.getItem("theme");
+        const themeBtn = document.getElementById("theme-toggle-btn");
+        const icon = themeBtn.querySelector("svg");
+
+        // 根据保存的主题设置初始图标
+        if (savedTheme === "dark") {
+          icon.innerHTML = `
+        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" 
+              stroke="currentColor" stroke-width="1.5" 
+              stroke-linecap="round" stroke-linejoin="round"/>
+      `;
+        } else {
+          icon.innerHTML = `
+        <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" 
+              stroke="currentColor" stroke-width="1.5" 
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M12 2V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M12 20V22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4.92993 4.92999L6.33993 6.33999" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M17.6599 17.66L19.0699 19.07" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 12H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 12H22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M6.33993 17.66L4.92993 19.07" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M19.0699 4.92999L17.6599 6.33999" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      `;
+        }
+      }
+
+      // 页面加载时初始化按钮图标
+      document.addEventListener("DOMContentLoaded", initThemeButton);
+
+      document
+        .getElementById("theme-toggle-btn")
+        .addEventListener("click", function () {
+          // 获取当前主题状态
+          const currentTheme = localStorage.getItem("theme");
+          // 切换主题状态
+          const newTheme = currentTheme === "light" ? "dark" : "light";
+          // 保存新主题
+          localStorage.setItem("theme", newTheme);
+          // 刷新页面
+          location.reload();
+        });
+    </script>
+
+    <script src="web-lib/npm__marked__lib__marked.umd.js"></script>
+
+    <script src="web-lib/npm__marked-base-url"></script>
+    <script src="web-lib/npm__marked-more-lists__lib__index.umd.js"></script>
+    <script src="web-lib/npm__marked-gfm-heading-id__lib__index.umd.js"></script>
+
+    <script src="web-lib/npm__marked-footnote__dist__index.umd.min.js"></script>
+    <script src="web-lib/npm__mermaid@11.7.0__dist__mermaid.min.js"></script>
+
+    <script src="web-lib/npm__marked-highlight__lib__index.umd.js"></script>
+    <script src="web-lib/ajax__libs__highlight.js__11.11.1__highlight.min.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        min-height: 100vh;
+        --text-color: #333333;
+        --bg-color: #ffffff;
+        --link-color: #0366d6;
+        --border-color: #e1e4e8;
+        --blockquote-bg: #f6f8fa;
+        --table-border: #dfe2e5;
+        --table-row-bg: #ffffff;
+        --table-alt-row-bg: #f6f8fa;
+        --code-container-bg: #f6f8fa;
+        --code-container-padding: 16px;
+        --code-container-radius: 6px;
+        --code-container-margin: 16px 0;
+        --toc-hover-bg: rgba(3, 102, 214, 0.1);
+        --toc-active-bg: rgba(3, 102, 214, 0.2);
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        transition: all 0.3s ease;
+      }
+
+      /* Dark theme */
+      body.dark {
+        --text-color: #e0e0e0;
+        --bg-color: #1e1e1e;
+        --link-color: #58a6ff;
+        --border-color: #444;
+        --blockquote-bg: #2a2a2a;
+        --table-border: #444;
+        --table-row-bg: #252525;
+        --table-alt-row-bg: #2a2a2a;
+        --code-container-bg: #2d2d2d;
+        --toc-hover-bg: rgba(88, 166, 255, 0.1);
+        --toc-active-bg: rgba(88, 166, 255, 0.2);
+      }
+
+      /* 目录容器 */
+      .c-md-toc {
+        position: sticky;
+        top: 30px;
+        height: 100vh;
+        width: 280px;
+        min-width: 280px;
+        overflow-y: auto;
+        padding: 20px;
+        background: var(--bg-color);
+        border-right: 1px solid var(--border-color);
+        box-sizing: border-box;
+        margin-left: 75px;
+      }
+
+      #content {
+        margin-right: 75px;
+        background-color: var(--bg-color);
+      }
+
+      /* 目录标题 */
+      .c-md-toc-title {
+        font-size: 1.2em;
+        font-weight: 600;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-color);
+      }
+
+      /* 目录列表 */
+      .c-md-toc-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      /* 目录项 */
+      .c-md-toc-item {
+        margin: 8px 0;
+        padding: 0;
+        line-height: 1.5;
+      }
+
+      .c-md-toc-link {
+        color: var(--text-color);
+        text-decoration: none;
+        display: block;
+        padding: 8px 12px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        font-size: 0.95em;
+      }
+
+      .c-md-toc-link:hover {
+        background: var(--toc-hover-bg);
+        color: var(--link-color);
+      }
+
+      /* 三级缩进 */
+      .c-md-toc-level-2 {
+        padding-left: 16px;
+      }
+      .c-md-toc-level-3 {
+        padding-left: 32px;
+      }
+
+      /* 当前活动标题 */
+      .c-md-toc-link.active {
+        color: var(--link-color);
+        font-weight: bold;
+        background: var(--toc-active-bg);
+      }
+
+      /* 内容区域调整 */
+      .markdown-body {
+        margin-left: 300px;
+        transition: margin 0.3s ease;
+      }
+
+      /* 窄屏模式 (<1024px) */
+      @media (max-width: 1023px) {
+        .c-md-toc {
+          display: none;
+        }
+
+        #content {
+          margin-right: 0;
+          margin-left: 0;
+        }
+      }
+
+      /* 超宽屏模式 (≥1680px) */
+      @media (min-width: 1680px) {
+        #content {
+          margin-right: 200px;
+          margin-left: 5%;
+        }
+      }
+
+      @media (min-width: 1400px) and (max-width: 1680px) {
+        #content {
+          margin-right: 150px;
+        }
+      }
+
+      @media (min-width: 1023px) and (max-width: 1400px) {
+        #content {
+          margin-right: 0px;
+        }
+      }
+
+      .c-md-body {
+        --text-color: #e0e0e0;
+        --bg-color: #1e1e1e;
+        --link-color: #58a6ff;
+        --border-color: #444;
+        --blockquote-bg: #2a2a2a;
+        --table-border: #444;
+        --table-row-bg: #252525;
+        --table-alt-row-bg: #2a2a2a;
+
+        /* 代码容器样式（不影响内部代码颜色） */
+        --code-container-bg: #2d2d2d;
+        --code-container-padding: 16px;
+        --code-container-radius: 6px;
+        --code-container-margin: 16px 0;
+      }
+
+      /* 浅色主题 */
+      .c-md-body-light {
+        --text-color: #333333;
+        --bg-color: #ffffff;
+        --link-color: #0366d6;
+        --border-color: #e1e4e8;
+        --blockquote-bg: #f6f8fa;
+        --table-border: #dfe2e5;
+        --table-row-bg: #ffffff;
+        --table-alt-row-bg: #f6f8fa;
+
+        /* 代码容器样式（不影响内部代码颜色） */
+        --code-container-bg: #f6f8fa;
+        --code-container-padding: 16px;
+        --code-container-radius: 6px;
+        --code-container-margin: 16px 0;
+      }
+      /* 应用主题变量 */
+      .c-md-body,
+      .c-md-body-light {
+        font-family: "Fira Code", "Consolas", monospace;
+        line-height: 1.6;
+        color: var(--text-color);
+        background-color: var(--bg-color);
+        padding: 20px;
+        max-width: 1500px;
+        margin: 0 auto;
+        transition: all 0.3s ease;
+      }
+
+      /* 标题样式 */
+      .c-md-body h1,
+      .c-md-body-light h1 {
+        font-size: 2.2em;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 0.3em;
+        margin: 1em 0 0.8em;
+      }
+
+      /* 代码块样式 */
+      .c-md-body pre,
+      .c-md-body-light pre {
+        background-color: var(--code-bg);
+        /* padding: 16px; */
+        border-radius: 4px;
+        overflow: auto;
+      }
+
+      /* 链接样式 */
+      .c-md-body a,
+      .c-md-body-light a {
+        color: var(--link-color);
+        text-decoration: none;
+      }
+
+      /* 表格样式 */
+      .c-md-body table,
+      .c-md-body-light table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1em 0;
+      }
+
+      .c-md-body th,
+      .c-md-body td,
+      .c-md-body-light th,
+      .c-md-body-light td {
+        border: 1px solid var(--table-border);
+        padding: 6px 13px;
+      }
+
+      .c-md-body tr:nth-child(2n),
+      .c-md-body-light tr:nth-child(2n) {
+        background-color: var(--table-alt-row-bg);
+      }
+
+      /* 引用块样式 */
+      .c-md-body blockquote,
+      .c-md-body-light blockquote {
+        padding: 0 1em;
+        color: var(--text-color);
+        border-left: 0.25em solid var(--border-color);
+        background-color: var(--blockquote-bg);
+        margin: 0 0 16px 0;
+      }
+
+      /* 图片 */
+      .c-md-body img,
+      .c-md-body-light img {
+        max-width: 100%; /* 限制图片不超过容器宽度 */
+        height: auto; /* 保持原始宽高比 */
+        display: block; /* 避免行内空白 */
+        margin: 1em auto; /* 居中显示并添加垂直间距 */
+      }
+
+      /* 可选：为超大图片添加特殊样式 */
+      .c-md-body img[width*="0"],
+      .c-md-body-light img[width*="0"] {
+        max-height: 60vh; /* 限制高度为视口的60% */
+        object-fit: contain; /* 保持比例完整显示 */
+      }
+    </style>
+
+    <script>
+      hljs.highlightAll();
+      function getCurrentBasePath() {
+        const path = window.location.pathname; // 获取当前路径，例如：/docs/guide/intro.html
+        const segments = path.split("/").filter(Boolean); // 拆分为 ["docs", "guide", "intro.html"]
+
+        if (segments.length === 0) return "/"; // 默认根目录
+
+        // 假设第一个路径段是基础路径，比如 `/docs/`
+        return "/" + segments[0] + "/";
+      }
+      marked.use(markedBaseUrl.baseUrl(getCurrentBasePath()));
+      marked.use(markedMoreLists());
+      marked.use(markedFootnote());
+      marked.use(
+        window.markedGfmHeadingId.gfmHeadingId({
+          prefix: "c-md-header-",
+        })
+      );
+      marked.use({
+        gfm: true,
+        highlight: function (code, lang) {
+          if (lang === "mermaid") return "mermaid";
+          const language = hljs.getLanguage(lang) ? lang : "plaintext";
+          return hljs.highlight(code, { language }).value;
+        },
+      });
+    </script>
+
+    <script type="module">
+      // Set options
+      const isDardMode =
+        localStorage.getItem("theme") == "light" ? false : true;
+
+      let currentThemeLink = null;
+      const loadTheme = (darkMode) => {
+        // 移除旧的主题链接
+        if (currentThemeLink) {
+          document.head.removeChild(currentThemeLink);
+          currentThemeLink = null;
+        }
+
+        // 创建新的主题链接
+        const themeUrl = darkMode
+          ? "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css"
+          : "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css";
+
+        currentThemeLink = document.createElement("link");
+        currentThemeLink.rel = "stylesheet";
+        currentThemeLink.href = themeUrl;
+        document.head.appendChild(currentThemeLink);
+
+        const content = document.getElementById("content");
+
+        // 移除所有与主题相关的 class
+        content.classList.remove("c-md-body", "c-md-body-light");
+        content.classList.add(darkMode ? "c-md-body" : "c-md-body-light");
+
+        document.body.classList.remove("dark", "light");
+        document.body.classList.add(darkMode ? "dark" : "light");
+      };
+
+      loadTheme(isDardMode);
+
+      window.mermaid.initialize({
+        startOnLoad: false,
+        theme: isDardMode ? "dark" : "default",
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: true,
+        },
+      });
+
+      const url =
+        new URLSearchParams(window.location.search).get("url") ||
+            window.location.origin + "/examples/md-lang.md";
+      let mdText = "> 获取Markdown数据中...";
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        mdText = await response.text();
+      } catch (error) {
+        mdText = `# 获取Markdown数据失败: ${error.message}`;
+      }
+
+      document.getElementById("content").innerHTML = marked.parse(mdText);
+
+      window.mermaid.run({
+        nodes: document.querySelectorAll(".language-mermaid"),
+      });
+    </script>
+
+    <script>
+      const homeUrl =
+        new URLSearchParams(window.location.search).get("home") || "";
+
+      console.log("Home URL:", homeUrl);
+      if (homeUrl) {
+        const homeBtn = document.createElement("a");
+        homeBtn.href = homeUrl;
+        homeBtn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+      <path d="M9 22V12h6v10"></path>
+    </svg>
+  `;
+
+        // 精致图标样式
+        homeBtn.style.cssText = `
+    position: fixed;
+        bottom: 200px;
+        right: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    backdrop-filter: blur(5px);
+    text-decoration: none;
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  `;
+
+        homeBtn.querySelector("svg").style.cssText = `
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+  `;
+
+        // 悬停动画
+        homeBtn.addEventListener("mouseenter", () => {
+          homeBtn.style.boxShadow = "0 4px 16px rgba(0,0,0,0.15)";
+          homeBtn.style.transform = "translateY(-2px) scale(1.05)";
+          homeBtn.querySelector("svg").style.transform = "scale(1.1)";
+          homeBtn.style.backgroundColor = "rgba(255,255,255,1)";
+        });
+
+        homeBtn.addEventListener("mouseleave", () => {
+          homeBtn.style.boxShadow = "0 2px 12px rgba(0,0,0,0.1)";
+          homeBtn.style.transform = "none";
+          homeBtn.querySelector("svg").style.transform = "none";
+          homeBtn.style.backgroundColor = "rgba(255,255,255,0.9)";
+        });
+
+        // 点击动画
+        homeBtn.addEventListener("mousedown", () => {
+          homeBtn.style.transform = "translateY(1px) scale(0.98)";
+        });
+
+        homeBtn.addEventListener("mouseup", () => {
+          homeBtn.style.transform = "translateY(-2px) scale(1.05)";
+        });
+
+        document.body.appendChild(homeBtn);
+      }
+    </script>
+
+    <script>
+      // 生成三级目录的函数
+      function generateTOC(contentSelector, tocSelector) {
+        const contentElement = document.querySelector(contentSelector);
+        const tocElement = document.querySelector(tocSelector);
+
+        if (!contentElement || !tocElement) return;
+
+        // 只获取 h1-h3 标题元素
+        const headers = contentElement.querySelectorAll("h1, h2, h3");
+        const tocList = tocElement.querySelector(".c-md-toc-list");
+
+        // 清空现有目录
+        tocList.innerHTML = "";
+
+        headers.forEach((header) => {
+          const level = parseInt(header.tagName.substring(1));
+          const id = header.id;
+          const text = header.textContent;
+
+          const item = document.createElement("li");
+          item.className = `c-md-toc-item c-md-toc-level-${level}`;
+
+          const link = document.createElement("a");
+          link.href = `#${id}`;
+          link.className = "c-md-toc-link";
+          link.textContent = text;
+
+          item.appendChild(link);
+          tocList.appendChild(item);
+        });
+
+        // 添加滚动高亮
+        setupTOCScrollHighlight();
+      }
+
+      // 滚动高亮当前章节
+      function setupTOCScrollHighlight() {
+        const links = document.querySelectorAll(".c-md-toc-link");
+        const headers = document.querySelectorAll('[id^="c-md-header-"]');
+
+        function highlight() {
+          let current = "";
+
+          headers.forEach((header) => {
+            const rect = header.getBoundingClientRect();
+            if (rect.top <= 100) {
+              current = "#" + header.id;
+            }
+          });
+
+          links.forEach((link) => {
+            link.classList.remove("active");
+            if (link.getAttribute("href") === current) {
+              link.classList.add("active");
+            }
+          });
+        }
+
+        window.addEventListener("scroll", highlight);
+        highlight();
+      }
+
+      // 在内容渲染后调用
+      setTimeout(() => {
+        generateTOC("#content", "#c-md-toc");
+      }, 100);
+    </script>
+
+    <script>
+      // 返回顶部按钮（独立、美观、不影响样式）
+      document.addEventListener("DOMContentLoaded", function () {
+        // 创建按钮容器
+        const btnContainer = document.createElement("div");
+        btnContainer.style.position = "fixed";
+        btnContainer.style.bottom = "70px"; // 在主题按钮上方
+        btnContainer.style.right = "20px";
+        btnContainer.style.zIndex = "1000";
+
+        // 创建按钮
+        const backToTopBtn = document.createElement("button");
+        backToTopBtn.id = "back-to-top-btn";
+        backToTopBtn.title = "返回顶部";
+
+        // 按钮样式
+        backToTopBtn.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.9);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border: none;
+        cursor: pointer;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    `;
+
+        // 悬停效果
+        backToTopBtn.onmouseenter = function () {
+          this.style.transform = "scale(1.1)";
+          this.style.background = "rgba(255,255,255,1)";
+        };
+        backToTopBtn.onmouseleave = function () {
+          this.style.transform = "scale(1)";
+          this.style.background = "rgba(255,255,255,0.9)";
+        };
+
+        // 更美观的SVG图标
+        backToTopBtn.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 15L12 8L19 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    `;
+
+        btnContainer.appendChild(backToTopBtn);
+        document.body.appendChild(btnContainer);
+
+        // 滚动检测
+        window.addEventListener("scroll", function () {
+          if (window.scrollY > 300) {
+            backToTopBtn.style.opacity = "1";
+            backToTopBtn.style.visibility = "visible";
+          } else {
+            backToTopBtn.style.opacity = "0";
+            backToTopBtn.style.visibility = "hidden";
+          }
+        });
+
+        // 点击事件
+        backToTopBtn.addEventListener("click", function () {
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
