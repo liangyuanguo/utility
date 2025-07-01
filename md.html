@@ -494,6 +494,74 @@
       window.mermaid.run({
         nodes: document.querySelectorAll(".language-mermaid"),
       });
+
+
+            // 生成三级目录的函数
+      function generateTOC(contentSelector, tocSelector) {
+        const contentElement = document.querySelector(contentSelector);
+        const tocElement = document.querySelector(tocSelector);
+
+        if (!contentElement || !tocElement) return;
+
+        // 只获取 h1-h3 标题元素
+        const headers = contentElement.querySelectorAll("h1, h2, h3");
+        const tocList = tocElement.querySelector(".c-md-toc-list");
+
+        // 清空现有目录
+        tocList.innerHTML = "";
+
+        headers.forEach((header) => {
+          const level = parseInt(header.tagName.substring(1));
+          const id = header.id;
+          const text = header.textContent;
+
+          const item = document.createElement("li");
+          item.className = `c-md-toc-item c-md-toc-level-${level}`;
+
+          const link = document.createElement("a");
+          link.href = `#${id}`;
+          link.className = "c-md-toc-link";
+          link.textContent = text;
+
+          item.appendChild(link);
+          tocList.appendChild(item);
+        });
+
+        // 添加滚动高亮
+        setupTOCScrollHighlight();
+      }
+
+      // 滚动高亮当前章节
+      function setupTOCScrollHighlight() {
+        const links = document.querySelectorAll(".c-md-toc-link");
+        const headers = document.querySelectorAll('[id^="c-md-header-"]');
+
+        function highlight() {
+          let current = "";
+
+          headers.forEach((header) => {
+            const rect = header.getBoundingClientRect();
+            if (rect.top <= 100) {
+              current = "#" + header.id;
+            }
+          });
+
+          links.forEach((link) => {
+            link.classList.remove("active");
+            if (link.getAttribute("href") === current) {
+              link.classList.add("active");
+            }
+          });
+        }
+
+        window.addEventListener("scroll", highlight);
+        highlight();
+      }
+
+      // 在内容渲染后调用
+      setTimeout(() => {
+        generateTOC("#content", "#c-md-toc");
+      }, 100);
     </script>
 
     <script>
@@ -562,75 +630,6 @@
 
         document.body.appendChild(homeBtn);
       }
-    </script>
-
-    <script>
-      // 生成三级目录的函数
-      function generateTOC(contentSelector, tocSelector) {
-        const contentElement = document.querySelector(contentSelector);
-        const tocElement = document.querySelector(tocSelector);
-
-        if (!contentElement || !tocElement) return;
-
-        // 只获取 h1-h3 标题元素
-        const headers = contentElement.querySelectorAll("h1, h2, h3");
-        const tocList = tocElement.querySelector(".c-md-toc-list");
-
-        // 清空现有目录
-        tocList.innerHTML = "";
-
-        headers.forEach((header) => {
-          const level = parseInt(header.tagName.substring(1));
-          const id = header.id;
-          const text = header.textContent;
-
-          const item = document.createElement("li");
-          item.className = `c-md-toc-item c-md-toc-level-${level}`;
-
-          const link = document.createElement("a");
-          link.href = `#${id}`;
-          link.className = "c-md-toc-link";
-          link.textContent = text;
-
-          item.appendChild(link);
-          tocList.appendChild(item);
-        });
-
-        // 添加滚动高亮
-        setupTOCScrollHighlight();
-      }
-
-      // 滚动高亮当前章节
-      function setupTOCScrollHighlight() {
-        const links = document.querySelectorAll(".c-md-toc-link");
-        const headers = document.querySelectorAll('[id^="c-md-header-"]');
-
-        function highlight() {
-          let current = "";
-
-          headers.forEach((header) => {
-            const rect = header.getBoundingClientRect();
-            if (rect.top <= 100) {
-              current = "#" + header.id;
-            }
-          });
-
-          links.forEach((link) => {
-            link.classList.remove("active");
-            if (link.getAttribute("href") === current) {
-              link.classList.add("active");
-            }
-          });
-        }
-
-        window.addEventListener("scroll", highlight);
-        highlight();
-      }
-
-      // 在内容渲染后调用
-      setTimeout(() => {
-        generateTOC("#content", "#c-md-toc");
-      }, 100);
     </script>
 
     <script>
