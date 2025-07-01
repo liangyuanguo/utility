@@ -19,9 +19,7 @@
           color: var(--text-color);
         "
       >
-        <p>
-          © 2025 by LiangyuanGuo.
-        </p>
+        <p>© 2025 by LiangyuanGuo.</p>
       </footer>
     </aside>
     <div id="content" class="markdown-body-light"></div>
@@ -402,7 +400,6 @@
     </style>
 
     <script>
-      hljs.highlightAll();
       function getCurrentBasePath() {
         const path = window.location.pathname; // 获取当前路径，例如：/docs/guide/intro.html
         const segments = path.split("/").filter(Boolean); // 拆分为 ["docs", "guide", "intro.html"]
@@ -476,7 +473,7 @@
 
       const url =
         new URLSearchParams(window.location.search).get("url") ||
-            window.location.origin + "/examples/md-lang.md";
+        window.location.origin + "/examples/md-lang.md";
       let mdText = "> 获取Markdown数据中...";
 
       try {
@@ -495,8 +492,9 @@
         nodes: document.querySelectorAll(".language-mermaid"),
       });
 
+      hljs.highlightAll();
 
-            // 生成三级目录的函数
+      // 生成三级目录的函数
       function generateTOC(contentSelector, tocSelector) {
         const contentElement = document.querySelector(contentSelector);
         const tocElement = document.querySelector(tocSelector);
