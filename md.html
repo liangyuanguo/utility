@@ -31,6 +31,14 @@
         bottom: 20px;
         right: 20px;
         z-index: 1000;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      #theme-toggle-container.visible {
+        opacity: 1;
+        visibility: visible;
       }
 
       #theme-toggle-btn {
@@ -56,7 +64,22 @@
         width: 20px;
         height: 20px;
       }
+
+      /* 添加检测区域，使鼠标靠近时显示按钮 */
+      #theme-toggle-detection-area {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        z-index: 999;
+        /* background: rgba(255,0,0,0.1); 调试时可用，正式版移除 */
+      }
     </style>
+
+    <!-- 添加检测区域 -->
+    <div id="theme-toggle-detection-area"></div>
+
     <div id="theme-toggle-container">
       <button id="theme-toggle-btn" title="切换主题">
         <svg
@@ -101,6 +124,7 @@
       // 页面加载时初始化按钮图标
       document.addEventListener("DOMContentLoaded", initThemeButton);
 
+      // 主题切换功能
       document
         .getElementById("theme-toggle-btn")
         .addEventListener("click", function () {
@@ -113,21 +137,47 @@
           // 刷新页面
           location.reload();
         });
+
+      // 添加按钮显示/隐藏逻辑
+      let hideTimeout;
+      const detectionArea = document.getElementById(
+        "theme-toggle-detection-area"
+      );
+      const themeContainer = document.getElementById("theme-toggle-container");
+
+      function showThemeButton() {
+        clearTimeout(hideTimeout);
+        themeContainer.classList.add("visible");
+      }
+
+      function hideThemeButton() {
+        hideTimeout = setTimeout(() => {
+          themeContainer.classList.remove("visible");
+        }, 500); // 延迟500毫秒后隐藏
+      }
+
+      // 鼠标进入检测区域时显示按钮
+      detectionArea.addEventListener("mouseenter", showThemeButton);
+      themeContainer.addEventListener("mouseenter", showThemeButton);
+
+      // 鼠标离开检测区域和按钮时隐藏按钮
+      detectionArea.addEventListener("mouseleave", hideThemeButton);
+      themeContainer.addEventListener("mouseleave", hideThemeButton);
     </script>
 
+    <!-- 其余代码保持不变 -->
     <script src="web-lib/npm__marked__lib__marked.umd.js"></script>
-
     <script src="web-lib/npm__marked-base-url.js"></script>
     <script src="web-lib/npm__marked-more-lists__lib__index.umd.js"></script>
     <script src="web-lib/npm__marked-gfm-heading-id__lib__index.umd.js"></script>
-
     <script src="web-lib/npm__marked-footnote__dist__index.umd.min.js"></script>
     <script src="web-lib/npm__mermaid@11.7.0__dist__mermaid.min.js"></script>
-
     <script src="web-lib/npm__marked-highlight__lib__index.umd.js"></script>
     <script src="web-lib/ajax__libs__highlight.js__11.11.1__highlight.min.js"></script>
 
+    <!-- 其余样式和脚本保持不变 -->
     <style>
+      /* 原有样式保持不变 */
       body {
         margin: 0;
         padding: 0;
@@ -183,7 +233,7 @@
       }
 
       #content {
-          width: 100%;
+        width: 100%;
         margin-right: 75px;
         background-color: var(--bg-color);
       }
@@ -279,12 +329,14 @@
 
       @media (min-width: 1023px) and (max-width: 1400px) {
         #content {
-          margin-left: 50px;;
+          margin-left: 50px;
           margin-right: 0px;
         }
       }
 
       .c-md-body {
+        font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei",
+          sans-serif;
         --text-color: #e0e0e0;
         --bg-color: #1e1e1e;
         --link-color: #58a6ff;
@@ -321,7 +373,6 @@
       /* 应用主题变量 */
       .c-md-body,
       .c-md-body-light {
-        font-family: "Fira Code", "Consolas", monospace;
         line-height: 1.6;
         color: var(--text-color);
         background-color: var(--bg-color);
